@@ -2,6 +2,7 @@
 package Visao;
 
 import Controle.ClienteDao;
+import Controle.GrafoDao;
 import Controle.ProdutoDao;
 import Modelo.Carrinho;
 import Modelo.Cliente;
@@ -32,39 +33,42 @@ public class App {
             Produto p1 = daoProduto.read(1);
             Produto p2 = daoProduto.read(2);
             Produto p3 = daoProduto.read(3);
-            
             Carrinho c = new Carrinho("c2");
             ItemCarrinho item1 = new ItemCarrinho(p1,4);
             ItemCarrinho item2 = new ItemCarrinho(p2,2);
             ItemCarrinho item3 = new ItemCarrinho(p3,7);
-            
             c.addItem(item1);
             c.addItem(item2);
             c.addItem(item3);
             
             String jsonCarrinho = gson.toJson(c);
+            
+            //SETANDO CARRINHO NO REDIS
             jedis.setex(c.getSessionId(),1000,jsonCarrinho);
             
-            
             MongoClient cliente = new MongoClient("localhost", 27017);
-        
             MongoDatabase database = cliente.getDatabase("supermercado");
-        
             MongoCollection<Document> colecao = database.getCollection("Pedido");
             
-            Cliente cli = daoCliente.read("lyndemberg@gmail.com");
-            Pedido ped = new Pedido(2,cli,c);
+            Cliente cli = daoCliente.read("lyndembergbatista@gmail.com");
+            Pedido ped = new Pedido(5,cli,c);
+            //INSERINDO O PEDIDO NO MONGO
             colecao.insertOne(ped.toDocument());
             
-            
-            
             cliente.close();
+            
+            GrafoDao grafo = new GrafoDao();
+            //CRIANDO NÓS E RELACIONAMENTO
+            grafo.registraPedido(ped);
+            
+            //BUSCANDO RECOMENDAÇÕES DE ACORDO COM O PRODUTO 2
+            System.out.println(grafo.recomendacoes(p2));
+
             
             
             //BUSCANDO NO REDIS E EXIBINDO NA APLICAÇÃO
             //Carrinho cc = gson.fromJson(jedis.get("c2"), Carrinho.class);
             //System.out.println(cc);
-            
             
         } catch (ClassNotFoundException ex) {
             Logger.getLogger(App.class.getName()).log(Level.SEVERE, null, ex);
